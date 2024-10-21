@@ -1,154 +1,87 @@
-**Components**
+# IoT Light Sensing Project
 
+## Table of Contents
+1. [Components](#components)
+2. [System Overview](#system-overview)
+3. [Hardware Setup](#hardware-setup)
+   - [ESP8266 Setup](#esp8266-setup)
+   - [Raspberry Pi Setup](#raspberry-pi-setup)
+4. [Communication Protocol](#communication-protocol)
+5. [Main Functionality](#main-functionality)
+6. [System Flow](#system-flow)
+   - [Raspberry Pi Flow](#raspberry-pi-flow)
+   - [ESP8266 Flow](#esp8266-flow)
+7. [Demo](#demo)
+
+## Components
 - Raspberry Pi
-
 - ESP8266
-
 - Photoresistor (Light Sensor)
-
 - LEDs (Red, Yellow, Green, and White)
-
 - Buttons (Start/Reset, UDP Packet Loss Simulation)
 
-**Schematic Description**
+## System Overview
+This IoT project uses a Raspberry Pi and an ESP8266 to monitor light levels using a photoresistor. The ESP8266 collects data and sends it to the Raspberry Pi, which then displays the light level using LEDs.
 
-**ESP8266**
+## Hardware Setup
 
-1.  Photoresistor (Analog Light Sensor):
+### ESP8266 Setup
+1. **Photoresistor (Analog Light Sensor):**
+   - One side: Connected to 3.3V
+   - Other side: Connected to A0 (analog input) on the ESP8266
+   - Use a 10kΩ pull-down resistor between the photoresistor and ground
 
-- One side: Connected to 3.3V.
+2. **Onboard LED:** No extra connections needed (controlled via code)
 
-- Other side: Connected to A0 (analog input) on the ESP8266.
+![ESP8266 Schematic](./media/Picture1.png)
 
-- Use a pull-down resistor (typically 10kΩ) between the photoresistor
-  and ground.
+### Raspberry Pi Setup
+1. **LEDs:** All LEDs use a 330Ω resistor between the GPIO pin and LED anode
+   - Red LED: GPIO 27
+   - Yellow LED: GPIO 22
+   - Green LED: GPIO 23
+   - White LED: GPIO 24
 
-2.  Onboard LED of ESP8266:
+2. **Button:**
+   - Connected to GPIO 15
+   - Other leg connected to GND (pin 6)
+   - 10kΩ pull-down resistor between the button and GND
 
-- Onboard LED of the ESP8266, no extra connections needed as it’s
-  controlled via code.
+![Raspberry Pi Schematic](./media/Picture2.png)
 
-> <img src="./media/Picture1.png" style="width:3.47667in;height:3.35647in"
-> alt="A diagram of a circuit board Description automatically generated" />
+## Communication Protocol
+- Uses UDP for communication between Raspberry Pi and ESP8266
+- Raspberry Pi IP: 192.168.1.xxx
+- ESP8266 IP: 192.168.1.xxx
 
-**Raspberry Pi**
+### UDP Message Flow & Data Transmission
+1. **Start Communication:**
+   - Raspberry Pi → ESP8266: "START"
+   - ESP8266 → Raspberry Pi: "DATA: <average_value>" (every 2 seconds)
 
-1.  LEDs
+2. **Error Handling:**
+   - If no response from ESP8266 for 10 seconds:
+     - White LED flashes every 0.5 seconds
+     - Button press required to reset and re-establish communication
 
-> All LEDs have a 330Ω resistor between the GPIO pin and LED anode to
-> limit current.
+3. **Stop Communication:**
+   - Raspberry Pi → ESP8266: "STOP"
+   - ESP8266 halts data collection and turns off its onboard LED
 
-- Red LED: Anode (long leg): GPIO 27, Cathode (short leg): Connect to
-  GND.
+## Main Functionality
+1. **Initialization:** Button press on Raspberry Pi activates white LED and starts communication
+2. **ESP8266 Response:** Flashes LED, collects data, sends average light sensor value every 2 seconds
+3. **Raspberry Pi Reaction:** Controls RGB LEDs based on received light value (LOW, MEDIUM, HIGH)
+4. **Error Handling:** White LED flashes if no data received for 10 seconds
+5. **Reset:** Button press stops data collection and resets both devices
 
-- Yellow LED: Anode (long leg): GPIO 22, Cathode (short leg): Connect to
-  GND.
+## System Flow
 
-- Green LED: Anode (long leg): GPIO 23, Cathode (short leg): Connect to
-  GND.
+### Raspberry Pi Flow
+![Raspberry Pi Flowchart](./media/Picture3.png)
 
-- White LED: Anode (long leg): GPIO 24, Cathode (short leg): Connect to
-  GND.
+### ESP8266 Flow
+![ESP8266 Flowchart](./media/Picture4.png)
 
-2.  Button
-
-- Pin: GPIO 15
-
-- Ground: Connect the other leg to a GND pin (pin 6)
-
-- Resistor: 10kΩ pull-down resistor between the button and GND
-
-> <img src="./media/Picture2.png" style="width:3.37672in;height:3.78914in"
-> alt="A diagram of a circuit board Description automatically generated" />
-
-**Protocol**
-
-The Raspberry Pi and ESP8266 are connected over a UDP communication
-protocol.
-
-Raspberry Pi (IP: 192.168.1.xxx) sends and receives UDP messages on a
-specific port.
-
-ESP8266 (IP: 192.168.1.xxx) listens for instructions from the Pi to
-start or stop collecting data.
-
-**UDP Message Flow & Data Transmission**
-
-- Start Communication:
-
-> Raspberry Pi → ESP8266: "START"
->
-> ESP8266 → Raspberry Pi: "DATA: \<average_value\>" (every 2 seconds)
-
-- Error Handling:
-
-> Raspberry Pi detects no response from the ESP8266 for 10 seconds.
->
-> Raspberry Pi → User: White LED flashes every 0.5 seconds to indicate
-> an error.
->
-> Button press required to reset the system and re-establish
-> communication.
-
-- Stop Communication:
-
-> Raspberry Pi → ESP8266: "STOP"
->
-> ESP8266 halts data collection and turns off its onboard LED.
-
-**Flow-chart**
-
-<img src="./media/Picture3.png" style="width:2.09526in;height:5.54559in"
-alt="A diagram of a flowchart Description automatically generated" />
-
-**Flow-chart of Raspberry Pi**
-
-The flowchart illustrates the operation of the Raspberry Pi system,
-beginning with the initial state where it awaits user interaction. When
-the button is pressed, the system activates the white LED and enters a
-waiting state for UDP data from the ESP8266. If data is received within
-10 seconds, the process continues; otherwise, the system enters an error
-state until the button is pressed again to reinitialize communication.
-
-<img src="./media/Picture4.png" style="width:2.23448in;height:4.71304in"
-alt="A diagram of a flowchart Description automatically generated" />
-
-**Flow-chart of ESP8266**
-
-The flowchart depicts the operation of the ESP8266 system, starting from
-its initial state where it waits for commands from the Raspberry Pi.
-Upon receiving a "Start" message, the ESP8266 begins reading sensor
-values every second and sends the collected data back to the Raspberry
-Pi. If a "Stop" message is received, the ESP8266 ceases its data
-collection and returns to the initial state, ready for the next command.
-
-**Main Functionality**
-
-1.  Initialization: Pressing the button on the Raspberry Pi activates
-    the white LED and sends a UDP message to the ESP8266 to establish
-    communication.
-
-2.  ESP8266 Response: Upon receiving the UDP message, the ESP8266 begins
-    flashing its onboard LED every 0.5 seconds, collects light sensor
-    values every second, and sends UDP responses with the average light
-    sensor value every 2 seconds after a 5-second data collection
-    period.
-
-3.  Raspberry Pi Reaction: When the Raspberry Pi receives light sensor
-    data, it controls its RGB LEDs according to the received value: one
-    LED for LOW, two for MEDIUM, and all three for HIGH, with
-    configurable threshold values.
-
-4.  Error Handling: If the Raspberry Pi does not receive a message from
-    the ESP8266 within 10 seconds, it flashes the white LED to indicate
-    an error, refraining from reestablishing the connection until the
-    button is pressed again.
-
-5.  Reset: Pressing the button again sends a different UDP message to
-    the ESP8266, turns off all RGBW LEDs, stops data collection, turns
-    off the onboard LED, and resets both devices to their initial
-    states.
-
-**DEMO link:**
-
-<https://drive.google.com/file/d/1eb1Ryeq-JZTNZIdM9p7p94Wu8D1bjBXA/view?usp=drive_link>
+## Demo
+[View Demo Video](https://drive.google.com/file/d/1eb1Ryeq-JZTNZIdM9p7p94Wu8D1bjBXA/view?usp=drive_link)

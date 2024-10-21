@@ -1,7 +1,7 @@
 #ifndef WIFI_CRED
 #define WIFI_CRED
 
-const char* ssid = "Jimmy&Tim";
-const char* password = "1234567890";
+const char* ssid = "Your_Wifi_id";
+const char* password = "Your_Wifi_Password";
 
 #endif

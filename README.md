@@ -1,14 +1,14 @@
 **Components**
 
--   Raspberry Pi
+- Raspberry Pi
 
--   ESP8266
+- ESP8266
 
--   Photoresistor (Light Sensor)
+- Photoresistor (Light Sensor)
 
--   LEDs (Red, Yellow, Green, and White)
+- LEDs (Red, Yellow, Green, and White)
 
--   Buttons (Start/Reset, UDP Packet Loss Simulation)
+- Buttons (Start/Reset, UDP Packet Loss Simulation)
 
 **Schematic Description**
 
@@ -16,21 +16,20 @@
 
 1.  Photoresistor (Analog Light Sensor):
 
--   One side: Connected to 3.3V.
+- One side: Connected to 3.3V.
 
--   Other side: Connected to A0 (analog input) on the ESP8266.
+- Other side: Connected to A0 (analog input) on the ESP8266.
 
--   Use a pull-down resistor (typically 10kΩ) between the photoresistor
-    and ground.
+- Use a pull-down resistor (typically 10kΩ) between the photoresistor
+  and ground.
 
 2.  Onboard LED of ESP8266:
 
--   Onboard LED of the ESP8266, no extra connections needed as it's
-    controlled via code.
+- Onboard LED of the ESP8266, no extra connections needed as it’s
+  controlled via code.
 
-> ![A diagram of a circuit board Description automatically
-> generated](media/image1.png){width="3.476672134733158in"
-> height="3.356467629046369in"}
+> <img src="./media/image1.png" style="width:3.47667in;height:3.35647in"
+> alt="A diagram of a circuit board Description automatically generated" />
 
 **Raspberry Pi**
 
@@ -39,29 +38,28 @@
 > All LEDs have a 330Ω resistor between the GPIO pin and LED anode to
 > limit current.
 
--   Red LED: Anode (long leg): GPIO 27, Cathode (short leg): Connect to
-    GND.
+- Red LED: Anode (long leg): GPIO 27, Cathode (short leg): Connect to
+  GND.
 
--   Yellow LED: Anode (long leg): GPIO 22, Cathode (short leg): Connect
-    to GND.
+- Yellow LED: Anode (long leg): GPIO 22, Cathode (short leg): Connect to
+  GND.
 
--   Green LED: Anode (long leg): GPIO 23, Cathode (short leg): Connect
-    to GND.
+- Green LED: Anode (long leg): GPIO 23, Cathode (short leg): Connect to
+  GND.
 
--   White LED: Anode (long leg): GPIO 24, Cathode (short leg): Connect
-    to GND.
+- White LED: Anode (long leg): GPIO 24, Cathode (short leg): Connect to
+  GND.
 
 2.  Button
 
--   Pin: GPIO 15
+- Pin: GPIO 15
 
--   Ground: Connect the other leg to a GND pin (pin 6)
+- Ground: Connect the other leg to a GND pin (pin 6)
 
--   Resistor: 10kΩ pull-down resistor between the button and GND
+- Resistor: 10kΩ pull-down resistor between the button and GND
 
-> ![A diagram of a circuit board Description automatically
-> generated](media/image1.png){width="3.3767158792650918in"
-> height="3.789139326334208in"}
+> <img src="./media/image1.png" style="width:3.37672in;height:3.78914in"
+> alt="A diagram of a circuit board Description automatically generated" />
 
 **Protocol**
 
@@ -76,13 +74,13 @@ start or stop collecting data.
 
 **UDP Message Flow & Data Transmission**
 
--   Start Communication:
+- Start Communication:
 
-> Raspberry Pi → ESP8266: \"START\"
+> Raspberry Pi → ESP8266: "START"
 >
-> ESP8266 → Raspberry Pi: \"DATA: \<average_value\>\" (every 2 seconds)
+> ESP8266 → Raspberry Pi: "DATA: \<average_value\>" (every 2 seconds)
 
--   Error Handling:
+- Error Handling:
 
 > Raspberry Pi detects no response from the ESP8266 for 10 seconds.
 >
@@ -92,17 +90,16 @@ start or stop collecting data.
 > Button press required to reset the system and re-establish
 > communication.
 
--   Stop Communication:
+- Stop Communication:
 
-> Raspberry Pi → ESP8266: \"STOP\"
+> Raspberry Pi → ESP8266: "STOP"
 >
 > ESP8266 halts data collection and turns off its onboard LED.
 
 **Flow-chart**
 
-![A diagram of a flowchart Description automatically
-generated](media/image2.png){width="2.095260279965004in"
-height="5.545590551181102in"}
+<img src="./media/image2.png" style="width:2.09526in;height:5.54559in"
+alt="A diagram of a flowchart Description automatically generated" />
 
 **Flow-chart of Raspberry Pi**
 
@@ -113,17 +110,16 @@ waiting state for UDP data from the ESP8266. If data is received within
 10 seconds, the process continues; otherwise, the system enters an error
 state until the button is pressed again to reinitialize communication.
 
-![A diagram of a flowchart Description automatically
-generated](media/image2.png){width="2.2344816272965877in"
-height="4.713043525809274in"}
+<img src="./media/image2.png" style="width:2.23448in;height:4.71304in"
+alt="A diagram of a flowchart Description automatically generated" />
 
 **Flow-chart of ESP8266**
 
 The flowchart depicts the operation of the ESP8266 system, starting from
 its initial state where it waits for commands from the Raspberry Pi.
-Upon receiving a \"Start\" message, the ESP8266 begins reading sensor
+Upon receiving a "Start" message, the ESP8266 begins reading sensor
 values every second and sends the collected data back to the Raspberry
-Pi. If a \"Stop\" message is received, the ESP8266 ceases its data
+Pi. If a "Stop" message is received, the ESP8266 ceases its data
 collection and returns to the initial state, ready for the next command.
 
 **Main Functionality**

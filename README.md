@@ -28,7 +28,7 @@
 - Onboard LED of the ESP8266, no extra connections needed as it’s
   controlled via code.
 
-> <img src="./media/image1.png" style="width:3.47667in;height:3.35647in"
+> <img src="./media/Picture1.png" style="width:3.47667in;height:3.35647in"
 > alt="A diagram of a circuit board Description automatically generated" />
 
 **Raspberry Pi**
@@ -58,7 +58,7 @@
 
 - Resistor: 10kΩ pull-down resistor between the button and GND
 
-> <img src="./media/image1.png" style="width:3.37672in;height:3.78914in"
+> <img src="./media/Picture2.png" style="width:3.37672in;height:3.78914in"
 > alt="A diagram of a circuit board Description automatically generated" />
 
 **Protocol**
@@ -98,7 +98,7 @@ start or stop collecting data.
 
 **Flow-chart**
 
-<img src="./media/image2.png" style="width:2.09526in;height:5.54559in"
+<img src="./media/Picture3.png" style="width:2.09526in;height:5.54559in"
 alt="A diagram of a flowchart Description automatically generated" />
 
 **Flow-chart of Raspberry Pi**
@@ -110,7 +110,7 @@ waiting state for UDP data from the ESP8266. If data is received within
 10 seconds, the process continues; otherwise, the system enters an error
 state until the button is pressed again to reinitialize communication.
 
-<img src="./media/image2.png" style="width:2.23448in;height:4.71304in"
+<img src="./media/Picture4.png" style="width:2.23448in;height:4.71304in"
 alt="A diagram of a flowchart Description automatically generated" />
 
 **Flow-chart of ESP8266**

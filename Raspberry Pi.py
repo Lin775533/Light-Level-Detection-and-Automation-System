@@ -4,8 +4,8 @@ import RPi.GPIO as GPIO
 import time
 
 # Define UDP settings
-UDP_IP = "192.168.1.85"
-UDP_PORT = 4210
+UDP_IP = "Your_IP"
+UDP_PORT = your_port
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Define thresholds

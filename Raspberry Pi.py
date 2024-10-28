@@ -4,16 +4,17 @@ import RPi.GPIO as GPIO
 import time
 
 # Define UDP settings
-UDP_IP = "Your_IP"
-UDP_PORT = your_port
+UDP_IP = "<broadcast>"
+UDP_PORT = 4210
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST,1)
 
 # Define thresholds
 low_threshold = 400
 high_threshold = 700
 last_msg = time.time()
 need_flash = False
-collecting_data = False  # New flag to track if data collection is active
+collecting_data = False
 
 lock = threading.Lock()
 
@@ -24,51 +25,90 @@ LED_YELLOW = 22
 LED_GREEN = 23   
 LED_WHITE = 24   
 
+# Dictionary to store data from each ESP8266 with timestamps
+esp_data = {}
+EXPECTED_ESP_COUNT = 3  # We expect exactly 3 ESPs
+ESP_TIMEOUT = 10  # Time in seconds before considering an ESP disconnected
+
 def receive():
     """
     Continuously listens for data from the UDP socket.
-    If data collection is active, it processes the received data and updates the LEDs.
+    Tracks data from each unique ESP8266 separately.
     """
     while True:
         data, addr = sock.recvfrom(1024)
-        received = data.decode()
-        if collecting_data:  # Only process data if collecting_data is True
-            change_LED(int(received))
+        if collecting_data:
+            received = int(data.decode())
+            sender_ip = addr[0]
+            
+            with lock:
+                # Initialize or update data for this ESP
+                esp_data[sender_ip] = {
+                    'value': received,
+                    'last_seen': time.time()
+                }
+                
+                print(f"Received message from {sender_ip}: {received}")
+                print(f"Active ESP count: {len(esp_data)}")
+                
+                # Calculate average only using active ESPs
+                if esp_data:
+                    avg_value = sum(d['value'] for d in esp_data.values()) / len(esp_data)
+                    print(f"Average from {len(esp_data)} active ESP(s): {avg_value}")
+                    change_LED(int(avg_value))
+            
             global last_msg
             with lock:
                 last_msg = time.time()
-            print("Received message: %s" % received)
-            message_shown = False  # Data is received, reset the flag
         else:
             print("Data received but not processing as collecting_data is False")
+
+def query_specific_esp(esp_ip):
+    """
+    Sends a specific query to a disconnected ESP.
+    """
+    query_message = f"Query_{esp_ip}"
+    print(f"Querying disconnected ESP at {esp_ip}")
+    sock.sendto(query_message.encode(), (UDP_IP, UDP_PORT))
 
 def packet_lost_detect():
     """
     Detects if no data has been received for over 10 seconds.
-    If data collection is active and no data is received, it triggers a flash on the white LED.
+    Also handles specific ESP disconnection detection.
     """
-    global message_shown  # Move this outside the loop so it persists
-    message_shown = False  # Flag to track if the message has been shown
-
+    message_shown = False
     while True:
-        global last_msg
-        cur_time = time.time()
-
-        dif = cur_time - last_msg
-        if dif > 10 and collecting_data:
-            if not message_shown:  # Only show message if it hasn't been shown
-                print("Not receiving data from ESP8266 for over 10 seconds...")
-                message_shown = True  # Set flag to prevent further prints
-            global need_flash
+        if collecting_data:
+            current_time = time.time()
+            
             with lock:
-                need_flash = True
+                # Check each ESP's last seen timestamp
+                disconnected_esps = []
+                for esp_ip, data in list(esp_data.items()):
+                    if current_time - data['last_seen'] > ESP_TIMEOUT:
+                        disconnected_esps.append(esp_ip)
+                        print(f"ESP8266 at {esp_ip} disconnected")
+                
+                # Only handle disconnections if we previously had all 3 ESPs
+                if len(esp_data) == EXPECTED_ESP_COUNT and disconnected_esps:
+                    for esp_ip in disconnected_esps:
+                        query_specific_esp(esp_ip)
+                        del esp_data[esp_ip]
+                
+                # Set flash warning if any ESPs are disconnected
+                global need_flash
+                if len(esp_data) < EXPECTED_ESP_COUNT:
+                    need_flash = True
+                    if not message_shown:
+                        print(f"Warning: Only {len(esp_data)} ESPs connected out of {EXPECTED_ESP_COUNT}")
+                        message_shown = True
+                else:
+                    need_flash = False
+                    message_shown = False
 
-        time.sleep(0.1)  # Add a short sleep to avoid excessive CPU usage
+        time.sleep(1)  # Check every second
 
 def flash_LED():
-    """
-    Flashes the white LED if the need_flash flag is set.
-    """
     while True:
         if need_flash:
             GPIO.output(LED_WHITE, GPIO.LOW)
@@ -77,9 +117,6 @@ def flash_LED():
             time.sleep(0.25)
 
 def change_LED(val):
-    """
-    Changes the state of the LEDs based on the received value.
-    """
     if val > high_threshold:
         GPIO.output(LED_RED, GPIO.HIGH)
         GPIO.output(LED_GREEN, GPIO.HIGH)
@@ -94,46 +131,36 @@ def change_LED(val):
         GPIO.output(LED_YELLOW, GPIO.HIGH)
 
 def button_monitor():
-    """
-    Monitors the button state and starts/stops data collection based on button presses.
-    """
-    global collecting_data, last_msg, need_flash, message_shown
+    global collecting_data, last_msg, need_flash
     while True:
-        if GPIO.input(BUTTON_PIN) == GPIO.HIGH:  # Button press detected
+        if GPIO.input(BUTTON_PIN) == GPIO.HIGH:
             if collecting_data:
-                # Stop data collection
                 print("Stopping data collection...")
                 sock.sendto('Reset'.encode(), (UDP_IP, UDP_PORT))
                 need_flash = False
                 collecting_data = False
+                esp_data.clear()  # Clear stored ESP data
                 GPIO.output(LED_RED, GPIO.LOW)
                 GPIO.output(LED_GREEN, GPIO.LOW)
                 GPIO.output(LED_YELLOW, GPIO.LOW)
-                GPIO.output(LED_WHITE, GPIO.LOW)  # Turn off white LED
+                GPIO.output(LED_WHITE, GPIO.LOW)
                 time.sleep(0.5)
-                GPIO.output(LED_WHITE, GPIO.LOW)  # Turn off white LED
+                GPIO.output(LED_WHITE, GPIO.LOW)
             else:
-                # Start data collection
                 print("Starting data collection...")
                 sock.sendto('Start'.encode(), (UDP_IP, UDP_PORT))
-                GPIO.output(LED_WHITE, GPIO.HIGH)  # Turn on white LED
+                GPIO.output(LED_WHITE, GPIO.HIGH)
                 collecting_data = True
-                message_shown = False
                 with lock:
                     last_msg = time.time()
-            time.sleep(0.5)  # Debounce delay to prevent multiple presses
+            time.sleep(0.5)
 
 def main():
-    """
-    Main function to set up GPIO pins and start the necessary threads.
-    """
     GPIO.setmode(GPIO.BCM)
-    # Set up button and LEDs
     GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(LED_YELLOW, GPIO.OUT)
     GPIO.output(LED_YELLOW, GPIO.LOW)
-
-    # Set up other LEDs
+    
     GPIO.setup(LED_RED, GPIO.OUT)
     GPIO.setup(LED_GREEN, GPIO.OUT)
     GPIO.setup(LED_WHITE, GPIO.OUT)
@@ -141,11 +168,9 @@ def main():
     GPIO.output(LED_GREEN, GPIO.LOW)
     GPIO.output(LED_WHITE, GPIO.LOW)
 
-    # Start monitoring button presses
     button_thread = threading.Thread(target=button_monitor)
     button_thread.start()
 
-    # Start other threads for receiving data, packet loss detection, and flashing LEDs
     receiving = threading.Thread(target=receive)
     receiving.start()
 
